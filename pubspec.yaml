@@ -1,0 +1,21 @@
+name: event_manager_ui
+description: A frontend-only Event Management UI built with Flutter and Riverpod.
+publish_to: "none"
+version: 0.1.0
+environment:
+  sdk: ">=2.18.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.3.6
+  google_fonts: ^4.0.3
+  shared_preferences: ^2.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.1
+
+flutter:
+  uses-material-design: true
