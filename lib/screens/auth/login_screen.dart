@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/input_field.dart';
 import '../../routes/app_routes.dart';
+import '../../core/api_service.dart';
 import 'widgets/auth_shell.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,12 +17,52 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
     _email.dispose();
     _password.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    if (_email.text.isEmpty || _password.text.isEmpty) {
+      _showError('Please fill in all fields');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await ApiService.login(
+        email: _email.text.trim(),
+        password: _password.text,
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      } else {
+        _showError(result['message'] ?? 'Login failed');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   @override
@@ -67,11 +108,8 @@ class _LoginScreenState extends State<LoginScreen> {
         SizedBox(
           width: double.infinity,
           child: CustomButton(
-            label: 'Login',
-            onPressed: () => Navigator.pushReplacementNamed(
-              context,
-              AppRoutes.home,
-            ),
+            label: _isLoading ? 'Logging in...' : 'Login',
+            onPressed: _isLoading ? () {} : _handleLogin,
           ),
         ),
       ],
