@@ -9,15 +9,9 @@ router.post("/register", async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
 
-    const pool = getPool();
-
     // Check if user exists
-    const checkResult = await pool
-      .request()
-      .input("email", "NVarChar", email)
-      .query("SELECT * FROM Users WHERE email = @email");
-
-    if (checkResult.recordset.length > 0) {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
       return res
         .status(400)
         .json({ success: false, message: "Email already registered" });
@@ -27,26 +21,30 @@ router.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
-    const result = await pool
-      .request()
-      .input("name", "NVarChar", name)
-      .input("email", "NVarChar", email)
-      .input("password", "NVarChar(MAX)", hashedPassword)
-      .input("phone", "NVarChar", phone).query(`
-        INSERT INTO Users (name, email, password, phone)
-        VALUES (@name, @email, @password, @phone);
-        SELECT SCOPE_IDENTITY() as id;
-      `);
-
-    const userId = result.recordset[0].id;
-    const token = jwt.sign({ id: userId, email }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      phone,
     });
+
+    const savedUser = await user.save();
+
+    const token = jwt.sign(
+      { id: savedUser._id, email: savedUser.email },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "7d" },
+    );
 
     res.status(201).json({
       success: true,
       message: "User registered successfully",
-      data: { id: userId, name, email, token },
+      data: {
+        id: savedUser._id,
+        name: savedUser.name,
+        email: savedUser.email,
+        token,
+      },
     });
   } catch (err) {
     console.error("Error registering user:", err);
@@ -59,21 +57,13 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const pool = getPool();
-
     // Find user
-    const result = await pool
-      .request()
-      .input("email", "NVarChar", email)
-      .query("SELECT * FROM Users WHERE email = @email");
-
-    if (result.recordset.length === 0) {
+    const user = await User.findOne({ email });
+    if (!user) {
       return res
         .status(401)
         .json({ success: false, message: "Invalid email or password" });
     }
-
-    const user = result.recordset[0];
 
     // Check password
     const passwordMatch = await bcrypt.compare(password, user.password);
@@ -85,16 +75,16 @@ router.post("/login", async (req, res) => {
 
     // Create token
     const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "7d" },
     );
 
     res.json({
       success: true,
       message: "Login successful",
       data: {
-        id: user.id,
+        id: user._id,
         name: user.name,
         email: user.email,
         token,
@@ -110,22 +100,16 @@ router.post("/login", async (req, res) => {
 router.get("/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const pool = getPool();
 
-    const result = await pool
-      .request()
-      .input("userId", "Int", userId)
-      .query(
-        "SELECT id, name, email, phone, avatarUrl, createdAt FROM Users WHERE id = @userId"
-      );
+    const user = await User.findById(userId).select("-password");
 
-    if (result.recordset.length === 0) {
+    if (!user) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
 
-    res.json({ success: true, data: result.recordset[0] });
+    res.json({ success: true, data: user });
   } catch (err) {
     console.error("Error fetching user:", err);
     res.status(500).json({ success: false, message: "Error fetching user" });
@@ -137,20 +121,24 @@ router.put("/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
     const { name, phone, avatarUrl } = req.body;
-    const pool = getPool();
 
-    await pool
-      .request()
-      .input("userId", "Int", userId)
-      .input("name", "NVarChar", name)
-      .input("phone", "NVarChar", phone)
-      .input("avatarUrl", "NVarChar(MAX)", avatarUrl).query(`
-        UPDATE Users 
-        SET name = @name, phone = @phone, avatarUrl = @avatarUrl, updatedAt = GETDATE()
-        WHERE id = @userId
-      `);
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { name, phone, avatarUrl, updatedAt: new Date() },
+      { new: true },
+    ).select("-password");
 
-    res.json({ success: true, message: "Profile updated successfully" });
+    if (!updatedUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      data: updatedUser,
+    });
   } catch (err) {
     console.error("Error updating profile:", err);
     res.status(500).json({ success: false, message: "Error updating profile" });
