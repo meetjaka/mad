@@ -31,8 +31,45 @@ class EventCard extends ConsumerWidget {
               borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(Dimens.cardRadius)),
               child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: Image.network(event.imageUrl, fit: BoxFit.cover)),
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  event.imageUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[300],
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.event, size: 40, color: Colors.grey[400]),
+                          const SizedBox(height: 4),
+                          Text(
+                            event.category,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
             // Rating badge
             Positioned(

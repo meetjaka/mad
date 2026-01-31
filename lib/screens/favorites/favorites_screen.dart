@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/favorites_provider.dart';
-import '../../data/dummy_events.dart';
+import '../../providers/events_provider.dart';
 import '../../widgets/event_card.dart';
 import '../../routes/app_routes.dart';
 
@@ -11,7 +11,8 @@ class FavoritesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final favs = ref.watch(favoritesProvider);
-    final items = dummyEvents.where((e) => favs.contains(e.id)).toList();
+    final eventsState = ref.watch(eventsProvider);
+    final items = eventsState.events.where((e) => favs.contains(e.id)).toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Favorites')),
