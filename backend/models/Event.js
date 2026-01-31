@@ -13,6 +13,10 @@ const eventSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  organizerId: {
+    type: String,
+    required: false,
+  },
   category: {
     type: String,
     required: true,
@@ -37,6 +41,10 @@ const eventSchema = new mongoose.Schema({
   attendees: {
     type: Number,
     default: 0,
+  },
+  maxAttendees: {
+    type: Number,
+    default: 100,
   },
   duration: String,
   difficulty: String,

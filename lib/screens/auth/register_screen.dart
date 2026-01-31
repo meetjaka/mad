@@ -19,7 +19,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _acceptTerms = false;
 
   @override
   void dispose() {
@@ -30,22 +32,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  String? _validateName(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Full name is required';
+    }
+    if (value.length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Email is required';
+    }
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+      return 'Enter a valid email address';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Password is required';
+    }
+    if (value.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
+      return 'Password must contain uppercase, lowercase & number';
+    }
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password';
+    }
+    if (value != _password.text) {
+      return 'Passwords do not match';
+    }
+    return null;
+  }
+
   Future<void> _handleRegister() async {
-    if (_name.text.isEmpty ||
-        _email.text.isEmpty ||
-        _password.text.isEmpty ||
-        _confirm.text.isEmpty) {
-      _showError('Please fill in all fields');
-      return;
-    }
-
-    if (_password.text != _confirm.text) {
-      _showError('Passwords do not match');
-      return;
-    }
-
-    if (_password.text.length < 6) {
-      _showError('Password must be at least 6 characters');
+    if (!_formKey.currentState!.validate()) return;
+    
+    if (!_acceptTerms) {
+      _showError('Please accept the terms and conditions');
       return;
     }
 
@@ -61,22 +95,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Account created successfully!'),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+        _showSuccess('Account created successfully! Welcome aboard!');
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRoutes.home);
+        }
       } else {
+        setState(() => _isLoading = false);
         _showError(result['message'] ?? 'Registration failed');
       }
-    } finally {
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
+        _showError('Connection error. Please try again.');
       }
     }
   }
@@ -84,10 +115,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
+          ],
+        ),
         backgroundColor: Colors.red.shade600,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
+          ],
+        ),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -99,55 +155,167 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return AuthShell(
       title: 'Create your account',
-      subtitle:
-          'Join Event Horizon to bookmark favorites, leave reviews, and manage bookings.',
+      subtitle: 'Join thousands of event enthusiasts and never miss out on amazing experiences.',
       children: [
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: const [
-            AuthHighlight(
-                icon: Icons.handshake_rounded, label: 'Trusted organizers'),
-            AuthHighlight(
-                icon: Icons.lock_rounded, label: 'Secure credentials'),
-            AuthHighlight(
-                icon: Icons.notifications_active_rounded,
-                label: 'Smart reminders'),
+        const SizedBox(height: 8),
+        Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              InputField(
+                hint: 'Full name',
+                controller: _name,
+                prefixIcon: Icons.person_outline_rounded,
+                validator: _validateName,
+              ),
+              const SizedBox(height: 16),
+              InputField(
+                hint: 'Email address',
+                controller: _email,
+                prefixIcon: Icons.email_outlined,
+                validator: _validateEmail,
+              ),
+              const SizedBox(height: 16),
+              InputField(
+                hint: 'Password',
+                controller: _password,
+                prefixIcon: Icons.lock_outline_rounded,
+                obscure: true,
+                validator: _validatePassword,
+              ),
+              const SizedBox(height: 16),
+              InputField(
+                hint: 'Confirm password',
+                controller: _confirm,
+                prefixIcon: Icons.lock_outline_rounded,
+                obscure: true,
+                validator: _validateConfirmPassword,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Transform.scale(
+              scale: 1.1,
+              child: Checkbox(
+                value: _acceptTerms,
+                onChanged: (value) => setState(() => _acceptTerms = value ?? false),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: subtle,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    children: [
+                      const TextSpan(text: 'I agree to the '),
+                      TextSpan(
+                        text: 'Terms of Service',
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                      const TextSpan(text: ' and '),
+                      TextSpan(
+                        text: 'Privacy Policy',
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 18),
-        InputField(hint: 'Full name', controller: _name),
-        const SizedBox(height: 12),
-        InputField(hint: 'Email address', controller: _email),
-        const SizedBox(height: 12),
-        InputField(hint: 'Password', controller: _password, obscure: true),
-        const SizedBox(height: 12),
-        InputField(
-            hint: 'Confirm password', controller: _confirm, obscure: true),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
           child: CustomButton(
-            label: _isLoading ? 'Creating account...' : 'Create account',
-            onPressed: _isLoading ? () {} : _handleRegister,
+            label: 'Create Account',
+            onPressed: _handleRegister,
+            isLoading: _isLoading,
+            icon: Icons.person_add_rounded,
           ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(child: Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'or sign up with',
+                style: GoogleFonts.inter(
+                  color: subtle,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Expanded(child: Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: CustomButton(
+                label: 'Google',
+                onPressed: () {},
+                filled: false,
+                icon: Icons.g_mobiledata_rounded,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: CustomButton(
+                label: 'Apple',
+                onPressed: () {},
+                filled: false,
+                icon: Icons.apple_rounded,
+              ),
+            ),
+          ],
         ),
       ],
       footer: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Already registered?',
-            style: GoogleFonts.manrope(
+            'Already have an account?',
+            style: GoogleFonts.inter(
               color: subtle,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
             child: Text(
               'Sign in',
-              style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.primary,
+              ),
             ),
           ),
         ],

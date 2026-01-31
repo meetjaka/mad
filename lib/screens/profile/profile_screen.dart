@@ -1,22 +1,115 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/custom_button.dart';
 import '../../routes/app_routes.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/favorites_provider.dart';
 import '../../providers/bookings_provider.dart';
+import '../../core/api_service.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  Map<String, dynamic>? _userData;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await ApiService.getUserProfile();
+
+      if (result['success'] == true) {
+        setState(() {
+          _userData = result['data'];
+          _isLoading = false;
+        });
+      } else {
+        // Fallback to local user data
+        final localUser = await ApiService.getUser();
+        setState(() {
+          _userData = localUser;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // Fallback to local user data
+      final localUser = await ApiService.getUser();
+      setState(() {
+        _userData = localUser;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ApiService.logout();
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.login,
+          (route) => false,
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final favs = ref.watch(favoritesProvider);
     final bookings = ref.watch(bookingsProvider);
+    final theme = Theme.of(context);
+
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final userName = _userData?['name'] ?? 'User';
+    final userEmail = _userData?['email'] ?? 'No email';
+    final userPhone = _userData?['phone'] ?? 'No phone';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: Text(
+          'Profile',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
+        centerTitle: true,
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -25,35 +118,87 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               // Profile Header
               Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    colors: [
+                      theme.primaryColor,
+                      theme.primaryColor.withOpacity(0.7),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.primaryColor.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: Theme.of(context).primaryColor,
-                      child: const Icon(Icons.person,
-                          size: 50, color: Colors.white),
+                      backgroundColor: Colors.white,
+                      child: Text(
+                        userName[0].toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: theme.primaryColor,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Jane Doe',
-                      style: Theme.of(context).textTheme.headlineSmall,
+                      userName,
+                      style: GoogleFonts.inter(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'jane.doe@example.com',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                      userEmail,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
                     ),
+                    if (userPhone != 'No phone') ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.phone,
+                              size: 14, color: Colors.white70),
+                          const SizedBox(width: 4),
+                          Text(
+                            userPhone,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 16),
-                    CustomButton(
-                      label: 'Edit Profile',
-                      onPressed: () {},
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        // TODO: Navigate to edit profile
+                      },
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: const Text('Edit Profile'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: theme.primaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -64,114 +209,139 @@ class ProfileScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.grey[850]
+                      : Colors.grey[50],
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: theme.brightness == Brightness.dark
+                        ? Colors.grey[700]!
+                        : Colors.grey[200]!,
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _StatCard('${bookings.length}', 'Bookings', Icons.event),
-                    _StatCard('${favs.length}', 'Favorites', Icons.favorite),
-                    _StatCard('12', 'Events Attended', Icons.check_circle),
+                    _StatCard('${bookings.length}', 'Bookings',
+                        Icons.event_note, theme),
+                    _StatCard(
+                        '${favs.length}', 'Favorites', Icons.favorite, theme),
+                    _StatCard('0', 'My Events', Icons.event_available, theme),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
 
-              // Account Settings
-              Text(
-                'Account Settings',
-                style: Theme.of(context).textTheme.titleMedium,
+              // My Events Section
+              _SectionTitle('My Events', theme),
+              const SizedBox(height: 12),
+              _MenuTile(
+                icon: Icons.event,
+                iconColor: theme.primaryColor,
+                title: 'Events I Created',
+                subtitle: 'Manage your published events',
+                onTap: () => Navigator.pushNamed(context, AppRoutes.myEvents),
+                theme: theme,
               ),
-              const SizedBox(height: 8),
-              ListTile(
-                leading: const Icon(Icons.brightness_6_outlined),
-                title: const Text('Dark Theme'),
-                subtitle:
-                    Text(themeMode == ThemeMode.dark ? 'Enabled' : 'Disabled'),
+              _MenuTile(
+                icon: Icons.favorite_outline,
+                iconColor: Colors.pink,
+                title: 'Saved Events',
+                subtitle: '${favs.length} events',
+                onTap: () => Navigator.pushNamed(context, AppRoutes.favorites),
+                theme: theme,
+              ),
+              _MenuTile(
+                icon: Icons.calendar_today,
+                iconColor: Colors.blue,
+                title: 'My Bookings',
+                subtitle: '${bookings.length} upcoming',
+                onTap: () => Navigator.pushNamed(context, AppRoutes.myBookings),
+                theme: theme,
+              ),
+              const SizedBox(height: 24),
+
+              // Account Settings
+              _SectionTitle('Account Settings', theme),
+              const SizedBox(height: 12),
+              _MenuTile(
+                icon: Icons.brightness_6_outlined,
+                iconColor: Colors.orange,
+                title: 'Dark Theme',
+                subtitle: themeMode == ThemeMode.dark ? 'Enabled' : 'Disabled',
+                theme: theme,
                 trailing: Switch(
                   value: themeMode == ThemeMode.dark,
                   onChanged: (v) => ref.read(themeModeProvider.notifier).state =
                       v ? ThemeMode.dark : ThemeMode.light,
                 ),
               ),
-              ListTile(
-                leading: const Icon(Icons.notifications_outlined),
-                title: const Text('Notifications'),
+              _MenuTile(
+                icon: Icons.notifications_outlined,
+                iconColor: Colors.purple,
+                title: 'Notifications',
+                subtitle: 'Push notifications',
+                theme: theme,
                 trailing: Switch(
                   value: true,
                   onChanged: (v) {},
                 ),
               ),
-              ListTile(
-                leading: const Icon(Icons.language),
-                title: const Text('Language'),
-                subtitle: const Text('English'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              _MenuTile(
+                icon: Icons.language,
+                iconColor: Colors.green,
+                title: 'Language',
+                subtitle: 'English',
                 onTap: () {},
+                theme: theme,
               ),
-              const Divider(),
-              const SizedBox(height: 8),
-
-              // Event Navigation
-              Text(
-                'My Events',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                leading: const Icon(Icons.favorite_outline),
-                title: const Text('Saved Events'),
-                subtitle: Text('${favs.length} events'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () => Navigator.pushNamed(context, AppRoutes.favorites),
-              ),
-              ListTile(
-                leading: const Icon(Icons.calendar_today),
-                title: const Text('My Bookings'),
-                subtitle: Text('${bookings.length} upcoming'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () => Navigator.pushNamed(context, AppRoutes.myBookings),
-              ),
-              const Divider(),
-              const SizedBox(height: 8),
+              const SizedBox(height: 24),
 
               // More Options
-              Text(
-                'More',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                leading: const Icon(Icons.help_outline),
-                title: const Text('Help & Support'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              _SectionTitle('More', theme),
+              const SizedBox(height: 12),
+              _MenuTile(
+                icon: Icons.help_outline,
+                iconColor: Colors.teal,
+                title: 'Help & Support',
                 onTap: () {},
+                theme: theme,
               ),
-              ListTile(
-                leading: const Icon(Icons.privacy_tip_outlined),
-                title: const Text('Privacy Policy'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              _MenuTile(
+                icon: Icons.privacy_tip_outlined,
+                iconColor: Colors.indigo,
+                title: 'Privacy Policy',
                 onTap: () {},
+                theme: theme,
               ),
-              ListTile(
-                leading: const Icon(Icons.description_outlined),
-                title: const Text('Terms & Conditions'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              _MenuTile(
+                icon: Icons.description_outlined,
+                iconColor: Colors.deepOrange,
+                title: 'Terms & Conditions',
                 onTap: () {},
+                theme: theme,
               ),
               const SizedBox(height: 24),
 
               // Logout
-              SizedBox(
+              Container(
                 width: double.infinity,
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: TextButton.icon(
+                  onPressed: _handleLogout,
+                  icon: const Icon(Icons.logout, color: Colors.red),
+                  label: Text(
+                    'Logout',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red,
+                    ),
                   ),
-                  onPressed: () => Navigator.popUntil(
-                      context, ModalRoute.withName('/login')),
-                  child: const Text('Logout'),
                 ),
               ),
               const SizedBox(height: 16),
@@ -183,31 +353,131 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final ThemeData theme;
+
+  const _SectionTitle(this.title, this.theme);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: GoogleFonts.inter(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color:
+            theme.brightness == Brightness.dark ? Colors.white : Colors.black87,
+      ),
+    );
+  }
+}
+
+class _MenuTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+  final ThemeData theme;
+
+  const _MenuTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+    this.trailing,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: theme.brightness == Brightness.dark
+            ? Colors.grey[850]
+            : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.brightness == Brightness.dark
+              ? Colors.grey[700]!
+              : Colors.grey[200]!,
+        ),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+        title: Text(
+          title,
+          style: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: subtitle != null
+            ? Text(
+                subtitle!,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                ),
+              )
+            : null,
+        trailing: trailing ??
+            (onTap != null
+                ? Icon(Icons.arrow_forward_ios,
+                    size: 16, color: Colors.grey[400])
+                : null),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
 class _StatCard extends StatelessWidget {
   final String value;
   final String label;
   final IconData icon;
+  final ThemeData theme;
 
-  const _StatCard(this.value, this.label, this.icon);
+  const _StatCard(this.value, this.label, this.icon, this.theme);
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, size: 28, color: Theme.of(context).primaryColor),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: theme.primaryColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 28, color: theme.primaryColor),
+        ),
         const SizedBox(height: 8),
         Text(
           value,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: GoogleFonts.inter(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.grey[600],
-              ),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
           textAlign: TextAlign.center,
         ),
       ],

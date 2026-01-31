@@ -205,23 +205,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: 0,
+        selectedItemColor: Theme.of(context).primaryColor,
+        unselectedItemColor: Colors.grey,
         onTap: (i) {
           if (i == 1) Navigator.pushNamed(context, AppRoutes.favorites);
-          if (i == 2) Navigator.pushNamed(context, AppRoutes.myBookings);
-          if (i == 3) Navigator.pushNamed(context, AppRoutes.profile);
+          if (i == 2) Navigator.pushNamed(context, AppRoutes.addEvent);
+          if (i == 3) Navigator.pushNamed(context, AppRoutes.myBookings);
+          if (i == 4) Navigator.pushNamed(context, AppRoutes.profile);
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.favorite_border),
+            activeIcon: Icon(Icons.favorite),
             label: 'Favorites',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
+            icon: Icon(Icons.add_circle_outline, size: 32),
+            activeIcon: Icon(Icons.add_circle, size: 32),
+            label: 'Add Event',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            activeIcon: Icon(Icons.calendar_today),
             label: 'Bookings',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );

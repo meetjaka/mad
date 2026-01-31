@@ -47,16 +47,22 @@ class ApiService {
     String? phone,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name,
-          'email': email,
-          'password': password,
-          'phone': phone ?? '',
-        }),
-      );
+      print('Attempting to register: $email');
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/auth/register'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'name': name,
+              'email': email,
+              'password': password,
+              'phone': phone ?? '',
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      print('Register response status: ${response.statusCode}');
+      print('Register response body: ${response.body}');
 
       final data = jsonDecode(response.body);
 
@@ -72,6 +78,7 @@ class ApiService {
         };
       }
     } catch (e) {
+      print('Register error: $e');
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
     }
   }
@@ -82,14 +89,20 @@ class ApiService {
     required String password,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
-      );
+      print('Attempting to login: $email');
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/auth/login'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email,
+              'password': password,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      print('Login response status: ${response.statusCode}');
+      print('Login response body: ${response.body}');
 
       final data = jsonDecode(response.body);
 
@@ -102,6 +115,7 @@ class ApiService {
         return {'success': false, 'message': data['message'] ?? 'Login failed'};
       }
     } catch (e) {
+      print('Login error: $e');
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
     }
   }
@@ -155,5 +169,163 @@ class ApiService {
   static Future<bool> isAuthenticated() async {
     final token = await getToken();
     return token != null && token.isNotEmpty;
+  }
+
+  // Create event
+  static Future<Map<String, dynamic>> createEvent({
+    required String title,
+    required String description,
+    required String category,
+    required String location,
+    required DateTime dateTime,
+    required double price,
+    required int maxAttendees,
+  }) async {
+    try {
+      final token = await getToken();
+      final user = await getUser();
+
+      if (token == null || user == null) {
+        return {'success': false, 'message': 'Please login to create events'};
+      }
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/events'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'title': title,
+              'description': description,
+              'category': category,
+              'location': location,
+              'dateTime': dateTime.toIso8601String(),
+              'price': price,
+              'maxAttendees': maxAttendees,
+              'organizerId': user['id'],
+              'organizer': user['name'],
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      print('Create event response: ${response.statusCode}');
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': data['data']};
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to create event'
+        };
+      }
+    } catch (e) {
+      print('Create event error: $e');
+      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  // Get user's created events
+  static Future<Map<String, dynamic>> getUserEvents() async {
+    try {
+      final token = await getToken();
+      final user = await getUser();
+
+      if (token == null || user == null) {
+        return {'success': false, 'message': 'Not authenticated'};
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/events/organizer/${user['id']}'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      final data = jsonDecode(response.body);
+      return data;
+    } catch (e) {
+      print('Get user events error: $e');
+      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  // Get user profile
+  static Future<Map<String, dynamic>> getUserProfile() async {
+    try {
+      final token = await getToken();
+      final user = await getUser();
+
+      if (token == null || user == null) {
+        return {'success': false, 'message': 'Not authenticated'};
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/auth/${user['id']}'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        // Update local user data
+        await saveUser(data['data']);
+        return data;
+      }
+
+      return data;
+    } catch (e) {
+      print('Get user profile error: $e');
+      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  // Update user profile
+  static Future<Map<String, dynamic>> updateUserProfile({
+    String? name,
+    String? phone,
+    String? avatarUrl,
+  }) async {
+    try {
+      final token = await getToken();
+      final user = await getUser();
+
+      if (token == null || user == null) {
+        return {'success': false, 'message': 'Not authenticated'};
+      }
+
+      final Map<String, dynamic> updateData = {};
+      if (name != null) updateData['name'] = name;
+      if (phone != null) updateData['phone'] = phone;
+      if (avatarUrl != null) updateData['avatarUrl'] = avatarUrl;
+
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/auth/${user['id']}'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(updateData),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        // Update local user data
+        await saveUser(data['data']);
+        return data;
+      }
+
+      return data;
+    } catch (e) {
+      print('Update profile error: $e');
+      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
   }
 }

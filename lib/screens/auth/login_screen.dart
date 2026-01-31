@@ -17,6 +17,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
   @override
@@ -26,11 +27,25 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
-    if (_email.text.isEmpty || _password.text.isEmpty) {
-      _showError('Please fill in all fields');
-      return;
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Email is required';
     }
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+      return 'Enter a valid email';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Password is required';
+    }
+    return null;
+  }
+
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
@@ -45,11 +60,13 @@ class _LoginScreenState extends State<LoginScreen> {
       if (result['success'] == true) {
         Navigator.pushReplacementNamed(context, AppRoutes.home);
       } else {
+        setState(() => _isLoading = false);
         _showError(result['message'] ?? 'Login failed');
       }
-    } finally {
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
+        _showError('Connection error. Please try again.');
       }
     }
   }
@@ -57,10 +74,17 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
+          ],
+        ),
         backgroundColor: Colors.red.shade600,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -72,62 +96,120 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return AuthShell(
       title: 'Welcome back',
-      subtitle: 'Sign in to track your events, bookings, and reviews.',
+      subtitle: 'Sign in to discover amazing events and manage your bookings.',
       children: [
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: const [
-            AuthHighlight(
-                icon: Icons.timelapse_rounded, label: '2-min sign in'),
-            AuthHighlight(
-                icon: Icons.emoji_events_rounded, label: 'Curated picks'),
-            AuthHighlight(
-                icon: Icons.favorite_rounded, label: 'Favorites synced'),
-          ],
+        const SizedBox(height: 8),
+        Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              InputField(
+                hint: 'Email address',
+                controller: _email,
+                prefixIcon: Icons.email_outlined,
+                validator: _validateEmail,
+              ),
+              const SizedBox(height: 16),
+              InputField(
+                hint: 'Password',
+                controller: _password,
+                prefixIcon: Icons.lock_outline_rounded,
+                obscure: true,
+                validator: _validatePassword,
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 18),
-        InputField(hint: 'Email address', controller: _email),
         const SizedBox(height: 12),
-        InputField(hint: 'Password', controller: _password, obscure: true),
-        const SizedBox(height: 10),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: () {},
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
             child: Text(
               'Forgot password?',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontWeight: FontWeight.w600,
-                color: subtle,
+                color: theme.colorScheme.primary,
+                fontSize: 14,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
           child: CustomButton(
-            label: _isLoading ? 'Logging in...' : 'Login',
-            onPressed: _isLoading ? () {} : _handleLogin,
+            label: 'Sign In',
+            onPressed: _handleLogin,
+            isLoading: _isLoading,
+            icon: Icons.arrow_forward_rounded,
           ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(child: Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'or continue with',
+                style: GoogleFonts.inter(
+                  color: subtle,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Expanded(child: Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: CustomButton(
+                label: 'Google',
+                onPressed: () {},
+                filled: false,
+                icon: Icons.g_mobiledata_rounded,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: CustomButton(
+                label: 'Apple',
+                onPressed: () {},
+                filled: false,
+                icon: Icons.apple_rounded,
+              ),
+            ),
+          ],
         ),
       ],
       footer: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'New here?',
-            style: GoogleFonts.manrope(
+            'New to Event Horizon?',
+            style: GoogleFonts.inter(
               color: subtle,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pushNamed(context, AppRoutes.register),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
             child: Text(
               'Create account',
-              style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.primary,
+              ),
             ),
           ),
         ],

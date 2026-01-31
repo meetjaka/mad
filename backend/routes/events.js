@@ -60,6 +60,23 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Get events by organizer
+router.get("/organizer/:organizerId", async (req, res) => {
+  try {
+    const events = await Event.find({
+      organizerId: req.params.organizerId,
+    }).sort({ createdAt: -1 });
+
+    res.json({ success: true, data: events });
+  } catch (err) {
+    console.error("Error fetching organizer events:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching organizer events",
+    });
+  }
+});
+
 // Create event (admin only)
 router.post("/", async (req, res) => {
   try {
@@ -67,10 +84,12 @@ router.post("/", async (req, res) => {
       title,
       description,
       organizer,
+      organizerId,
       category,
       dateTime,
       location,
       price,
+      maxAttendees,
       imageUrl,
       rating,
       attendees,
@@ -83,10 +102,12 @@ router.post("/", async (req, res) => {
       title,
       description,
       organizer,
+      organizerId,
       category,
       dateTime: new Date(dateTime),
       location,
       price,
+      maxAttendees: maxAttendees || 100,
       imageUrl,
       rating: rating || 4.5,
       attendees: attendees || 0,
