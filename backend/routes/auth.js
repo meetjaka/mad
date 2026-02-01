@@ -96,6 +96,70 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// Google Sign-In
+router.post("/google", async (req, res) => {
+  try {
+    const { email, name, googleId, idToken, photoUrl } = req.body;
+
+    if (!email || !googleId || !idToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
+    }
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // User exists, update Google ID and photo if not set
+      if (!user.googleId) {
+        user.googleId = googleId;
+      }
+      if (photoUrl && !user.avatarUrl) {
+        user.avatarUrl = photoUrl;
+      }
+      user.updatedAt = new Date();
+      await user.save();
+    } else {
+      // Create new user
+      user = new User({
+        name,
+        email,
+        googleId,
+        avatarUrl: photoUrl,
+        password: await bcrypt.hash(Math.random().toString(36), 10), // Random password for Google users
+      });
+      await user.save();
+    }
+
+    // Create token
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "7d" },
+    );
+
+    res.json({
+      success: true,
+      message: "Google Sign-In successful",
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatarUrl: user.avatarUrl,
+        token,
+      },
+    });
+  } catch (err) {
+    console.error("Error with Google Sign-In:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error with Google Sign-In",
+    });
+  }
+});
+
 // Get user profile
 router.get("/:userId", async (req, res) => {
   try {

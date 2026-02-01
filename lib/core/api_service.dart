@@ -3,7 +3,14 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
+  // Using deployed backend (Google Sign-In won't work until backend is updated)
   static const String baseUrl = 'https://mad-edi9.onrender.com/api';
+
+  // For local backend with firewall rule:
+  // static const String baseUrl = 'http://192.168.0.130:3000/api';
+
+  // For Android emulator (local backend):
+  // static const String baseUrl = 'http://10.0.2.2:3000/api';
 
   // Store auth token
   static Future<void> saveToken(String token) async {
@@ -59,7 +66,7 @@ class ApiService {
               'phone': phone ?? '',
             }),
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 15)); // Reduced from 30s
 
       print('Register response status: ${response.statusCode}');
       print('Register response body: ${response.body}');
@@ -79,6 +86,13 @@ class ApiService {
       }
     } catch (e) {
       print('Register error: $e');
+      if (e.toString().contains('TimeoutException')) {
+        return {
+          'success': false,
+          'message':
+              'Connection timeout. Make sure backend is running at $baseUrl'
+        };
+      }
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
     }
   }
@@ -99,7 +113,7 @@ class ApiService {
               'password': password,
             }),
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 15)); // Reduced from 30s
 
       print('Login response status: ${response.statusCode}');
       print('Login response body: ${response.body}');
@@ -116,7 +130,89 @@ class ApiService {
       }
     } catch (e) {
       print('Login error: $e');
+      if (e.toString().contains('TimeoutException')) {
+        return {
+          'success': false,
+          'message':
+              'Connection timeout. Check if backend is running at $baseUrl'
+        };
+      }
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  // Google Sign-In
+  static Future<Map<String, dynamic>> googleSignIn({
+    required String email,
+    required String name,
+    required String googleId,
+    required String idToken,
+    String? photoUrl,
+  }) async {
+    try {
+      print('Attempting Google Sign-In: $email');
+      print('Backend URL: $baseUrl/auth/google');
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/auth/google'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email,
+              'name': name,
+              'googleId': googleId,
+              'idToken': idToken,
+              'photoUrl': photoUrl,
+            }),
+          )
+          .timeout(const Duration(seconds: 15)); // Reduced from 30s
+
+      print('Google Sign-In response status: ${response.statusCode}');
+      print('Google Sign-In response body: ${response.body}');
+
+      // Check if response is HTML instead of JSON
+      if (response.body.trim().startsWith('<!DOCTYPE') ||
+          response.body.trim().startsWith('<html')) {
+        return {
+          'success': false,
+          'message':
+              'Backend error: The /auth/google endpoint may not exist on the deployed server. Try using local backend.'
+        };
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        // Save token and user data
+        await saveToken(data['data']['token']);
+        await saveUser(data['data']);
+        return {'success': true, 'data': data['data']};
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Google Sign-In failed'
+        };
+      }
+    } catch (e) {
+      print('Google Sign-In error: $e');
+      if (e.toString().contains('TimeoutException')) {
+        return {
+          'success': false,
+          'message':
+              'Connection timeout. Make sure backend is running at $baseUrl'
+        };
+      }
+      if (e.toString().contains('FormatException')) {
+        return {
+          'success': false,
+          'message':
+              'Backend error: Please make sure your backend server has the Google Sign-In endpoint.'
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Connection failed. Check your internet and backend.'
+      };
     }
   }
 

@@ -5,6 +5,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/input_field.dart';
 import '../../routes/app_routes.dart';
 import '../../core/api_service.dart';
+import '../../core/google_auth_service.dart';
 import 'widgets/auth_shell.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -71,6 +72,38 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+
+    try {
+      print('Starting Google Sign-In...');
+      final result = await GoogleAuthService.signInWithGoogle();
+      print('Google Sign-In result: $result');
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        print('Google Sign-In successful, navigating to home...');
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      } else {
+        setState(() => _isLoading = false);
+        final message = result['message'] ?? 'Google Sign-In failed';
+        if (message != 'Sign in cancelled') {
+          print('Google Sign-In failed: $message');
+          _showError(message);
+        } else {
+          print('User cancelled Google Sign-In');
+        }
+      }
+    } catch (e) {
+      print('Google Sign-In exception: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showError('Google Sign-In error. Please try again.');
+      }
+    }
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -78,7 +111,9 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
             const SizedBox(width: 8),
-            Expanded(child: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
+            Expanded(
+                child: Text(message,
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
           ],
         ),
         backgroundColor: Colors.red.shade600,
@@ -151,7 +186,9 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 20),
         Row(
           children: [
-            Expanded(child: Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
+            Expanded(
+                child:
+                    Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
@@ -163,7 +200,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            Expanded(child: Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
+            Expanded(
+                child:
+                    Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
           ],
         ),
         const SizedBox(height: 20),
@@ -172,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Expanded(
               child: CustomButton(
                 label: 'Google',
-                onPressed: () {},
+                onPressed: _isLoading ? null : _handleGoogleSignIn,
                 filled: false,
                 icon: Icons.g_mobiledata_rounded,
               ),

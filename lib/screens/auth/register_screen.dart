@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/input_field.dart';
 import '../../core/api_service.dart';
+import '../../core/google_auth_service.dart';
 import '../../routes/app_routes.dart';
 import 'widgets/auth_shell.dart';
 
@@ -77,7 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (!_acceptTerms) {
       _showError('Please accept the terms and conditions');
       return;
@@ -112,6 +113,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    if (!_acceptTerms) {
+      _showError('Please accept the terms and conditions');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      print('Starting Google Sign-In from Register...');
+      final result = await GoogleAuthService.signInWithGoogle();
+      print('Google Sign-In result: $result');
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        print('Google Sign-In successful, showing success message...');
+        _showSuccess('Welcome! Account created successfully.');
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRoutes.home);
+        }
+      } else {
+        setState(() => _isLoading = false);
+        final message = result['message'] ?? 'Google Sign-In failed';
+        if (message != 'Sign in cancelled') {
+          print('Google Sign-In failed: $message');
+          _showError(message);
+        } else {
+          print('User cancelled Google Sign-In');
+        }
+      }
+    } catch (e) {
+      print('Google Sign-In exception: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showError('Google Sign-In error. Please try again.');
+      }
+    }
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -119,7 +161,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
             const SizedBox(width: 8),
-            Expanded(child: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
+            Expanded(
+                child: Text(message,
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
           ],
         ),
         backgroundColor: Colors.red.shade600,
@@ -135,9 +179,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       SnackBar(
         content: Row(
           children: [
-            Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+            Icon(Icons.check_circle_outline_rounded,
+                color: Colors.white, size: 20),
             const SizedBox(width: 8),
-            Expanded(child: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
+            Expanded(
+                child: Text(message,
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
           ],
         ),
         backgroundColor: Colors.green.shade600,
@@ -155,7 +202,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return AuthShell(
       title: 'Create your account',
-      subtitle: 'Join thousands of event enthusiasts and never miss out on amazing experiences.',
+      subtitle:
+          'Join thousands of event enthusiasts and never miss out on amazing experiences.',
       children: [
         const SizedBox(height: 8),
         Form(
@@ -202,8 +250,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               scale: 1.1,
               child: Checkbox(
                 value: _acceptTerms,
-                onChanged: (value) => setState(() => _acceptTerms = value ?? false),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                onChanged: (value) =>
+                    setState(() => _acceptTerms = value ?? false),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4)),
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
@@ -257,7 +307,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 20),
         Row(
           children: [
-            Expanded(child: Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
+            Expanded(
+                child:
+                    Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
@@ -269,7 +321,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
             ),
-            Expanded(child: Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
+            Expanded(
+                child:
+                    Divider(color: theme.colorScheme.outline.withOpacity(0.3))),
           ],
         ),
         const SizedBox(height: 20),
@@ -278,7 +332,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Expanded(
               child: CustomButton(
                 label: 'Google',
-                onPressed: () {},
+                onPressed: _isLoading ? null : _handleGoogleSignIn,
                 filled: false,
                 icon: Icons.g_mobiledata_rounded,
               ),

@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema({
   },
   phone: String,
   avatarUrl: String,
+  googleId: String, // For Google Sign-In users
   createdAt: {
     type: Date,
     default: Date.now,
