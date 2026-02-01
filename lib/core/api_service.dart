@@ -237,15 +237,43 @@ class ApiService {
         return {'success': false, 'message': 'Not authenticated'};
       }
 
+      // Get user ID (handle both 'id' and '_id' keys)
+      final userId = user['id'] ?? user['_id'];
+      if (userId == null) {
+        return {'success': false, 'message': 'User ID not found'};
+      }
+
+      print('Fetching events for organizer: $userId');
       final response = await http.get(
-        Uri.parse('$baseUrl/events/organizer/${user['id']}'),
+        Uri.parse('$baseUrl/events/organizer/$userId'),
         headers: {
           'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
         },
       ).timeout(const Duration(seconds: 30));
 
-      final data = jsonDecode(response.body);
-      return data;
+      print('Get user events response status: ${response.statusCode}');
+      print('Get user events response body: ${response.body}');
+
+      // Check if response is HTML (error page) instead of JSON
+      if (response.body.trim().startsWith('<!DOCTYPE') ||
+          response.body.trim().startsWith('<html')) {
+        return {
+          'success': false,
+          'message':
+              'Server error: Received HTML instead of JSON. Please check if backend is running properly.'
+        };
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data;
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to fetch events: ${response.statusCode}'
+        };
+      }
     } catch (e) {
       print('Get user events error: $e');
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
@@ -262,22 +290,49 @@ class ApiService {
         return {'success': false, 'message': 'Not authenticated'};
       }
 
+      // Get user ID (handle both 'id' and '_id' keys)
+      final userId = user['id'] ?? user['_id'];
+      if (userId == null) {
+        return {'success': false, 'message': 'User ID not found'};
+      }
+
       final response = await http.get(
-        Uri.parse('$baseUrl/auth/${user['id']}'),
+        Uri.parse('$baseUrl/auth/$userId'),
         headers: {
           'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
         },
       ).timeout(const Duration(seconds: 30));
 
-      final data = jsonDecode(response.body);
+      // Check if response is HTML instead of JSON
+      if (response.body.trim().startsWith('<!DOCTYPE') ||
+          response.body.trim().startsWith('<html')) {
+        return {
+          'success': false,
+          'message': 'Server error: Unable to connect to backend'
+        };
+      }
 
-      if (response.statusCode == 200 && data['success'] == true) {
-        // Update local user data
-        await saveUser(data['data']);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          // Update local user data - ensure ID is preserved
+          final userData = data['data'] as Map<String, dynamic>;
+          final updatedData = {
+            ...userData,
+            'id': userData['_id'] ?? userData['id'] ?? userId,
+            '_id': userData['_id'] ?? userData['id'] ?? userId,
+          };
+          await saveUser(updatedData);
+          return {'success': true, 'data': updatedData};
+        }
         return data;
       }
 
-      return data;
+      return {
+        'success': false,
+        'message': 'Failed to fetch profile: ${response.statusCode}'
+      };
     } catch (e) {
       print('Get user profile error: $e');
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
@@ -298,14 +353,25 @@ class ApiService {
         return {'success': false, 'message': 'Not authenticated'};
       }
 
+      // Get user ID (handle both 'id' and '_id' keys)
+      final userId = user['id'] ?? user['_id'];
+      if (userId == null) {
+        return {'success': false, 'message': 'User ID not found'};
+      }
+
       final Map<String, dynamic> updateData = {};
-      if (name != null) updateData['name'] = name;
-      if (phone != null) updateData['phone'] = phone;
-      if (avatarUrl != null) updateData['avatarUrl'] = avatarUrl;
+      if (name != null && name.isNotEmpty) updateData['name'] = name;
+      if (phone != null && phone.isNotEmpty) updateData['phone'] = phone;
+      if (avatarUrl != null && avatarUrl.isNotEmpty) {
+        updateData['avatarUrl'] = avatarUrl;
+      }
+
+      print('Updating user profile for ID: $userId');
+      print('Update data: $updateData');
 
       final response = await http
           .put(
-            Uri.parse('$baseUrl/auth/${user['id']}'),
+            Uri.parse('$baseUrl/auth/$userId'),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',
@@ -314,15 +380,56 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 30));
 
-      final data = jsonDecode(response.body);
+      print('Update profile response status: ${response.statusCode}');
+      print('Update profile response body: ${response.body}');
 
-      if (response.statusCode == 200 && data['success'] == true) {
-        // Update local user data
-        await saveUser(data['data']);
+      // Check if response is HTML instead of JSON
+      if (response.body.trim().startsWith('<!DOCTYPE') ||
+          response.body.trim().startsWith('<html')) {
+        return {
+          'success': false,
+          'message':
+              'Server error: Received HTML instead of JSON. Backend may not be running properly.'
+        };
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          // Update local user data - preserve the ID field
+          final updatedUserData = {
+            ...user,
+            'name': data['data']['name'],
+            'email': data['data']['email'],
+            'phone': data['data']['phone'] ?? '',
+            'avatarUrl': data['data']['avatarUrl'],
+            // Ensure we preserve both id formats
+            'id': data['data']['_id'] ?? data['data']['id'] ?? userId,
+            '_id': data['data']['_id'] ?? data['data']['id'] ?? userId,
+          };
+          await saveUser(updatedUserData);
+          return {
+            'success': true,
+            'data': updatedUserData,
+            'message': 'Profile updated successfully'
+          };
+        }
         return data;
       }
 
-      return data;
+      // Handle other status codes
+      try {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Update failed: ${response.statusCode}'
+        };
+      } catch (e) {
+        return {
+          'success': false,
+          'message': 'Update failed with status: ${response.statusCode}'
+        };
+      }
     } catch (e) {
       print('Update profile error: $e');
       return {'success': false, 'message': 'Network error: ${e.toString()}'};

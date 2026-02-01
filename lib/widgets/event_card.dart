@@ -12,8 +12,9 @@ class EventCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isFav =
-        ref.watch(favoritesProvider.select((s) => s.contains(event.id)));
+    final isFav = ref.watch(
+        favoritesProvider.select((favorites) => favorites.contains(event.id)));
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(Dimens.cardRadius),
@@ -22,7 +23,11 @@ class EventCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(Dimens.cardRadius),
           color: Theme.of(context).cardColor,
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            )
           ],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -32,42 +37,63 @@ class EventCard extends ConsumerWidget {
                   top: Radius.circular(Dimens.cardRadius)),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(
-                  event.imageUrl,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      color: Colors.grey[200],
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.event, size: 40, color: Colors.grey[400]),
-                          const SizedBox(height: 4),
-                          Text(
-                            event.category,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      event.imageUrl,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
                             ),
                           ),
-                        ],
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[300],
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.event,
+                                  size: 40, color: Colors.grey[400]),
+                              const SizedBox(height: 4),
+                              Text(
+                                event.category,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    // Gradient overlay
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.3),
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.1),
+                          ],
+                        ),
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -78,8 +104,17 @@ class EventCard extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.orange,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
+                  ),
                   borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -102,18 +137,37 @@ class EventCard extends ConsumerWidget {
             Positioned(
               right: 8,
               top: 8,
-              child: InkWell(
-                onTap: () =>
-                    ref.read(favoritesProvider.notifier).toggle(event.id),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(20)),
-                  child: Icon(isFav ? Icons.favorite : Icons.favorite_border,
-                      color: isFav ? Colors.redAccent : Colors.black54,
-                      size: 18),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () =>
+                      ref.read(favoritesProvider.notifier).toggle(event.id),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[850]!.withOpacity(0.95)
+                          : Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      isFav ? Icons.favorite : Icons.favorite_border,
+                      color: isFav
+                          ? Colors.red
+                          : (Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[300]
+                              : Colors.grey[700]),
+                      size: 18,
+                    ),
+                  ),
                 ),
               ),
             )
@@ -124,19 +178,33 @@ class EventCard extends ConsumerWidget {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
                 event.title,
-                style: Theme.of(context).textTheme.titleMedium,
-                maxLines: 1,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Icon(
+                    Icons.access_time,
+                    size: 14,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[400]
+                        : Colors.grey[600],
+                  ),
+                  const SizedBox(width: 4),
                   Flexible(
                     child: Text(
                       '${event.dateTime.month}/${event.dateTime.day} • ${event.location.split(',').first}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                            fontSize: 12,
                           ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -144,24 +212,49 @@ class EventCard extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    event.price == 0
-                        ? 'Free'
-                        : '\$${event.price.toStringAsFixed(0)}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF5B56D9).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      event.price == 0
+                          ? 'Free'
+                          : '\$${event.price.toStringAsFixed(0)}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF5B56D9),
+                          ),
+                    ),
                   ),
-                  Text(
-                    '${event.attendees}+ going',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[500],
-                          fontSize: 11,
-                        ),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.people,
+                        size: 14,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey[400]
+                            : Colors.grey[500],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${event.attendees}+',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                    ],
                   ),
                 ],
               )

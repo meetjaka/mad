@@ -18,11 +18,26 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
+  int _myEventsCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
+    _loadMyEventsCount();
+  }
+
+  Future<void> _loadMyEventsCount() async {
+    try {
+      final result = await ApiService.getUserEvents();
+      if (result['success'] == true) {
+        setState(() {
+          _myEventsCount = (result['data'] as List?)?.length ?? 0;
+        });
+      }
+    } catch (e) {
+      // Silently fail, keep count at 0
+    }
   }
 
   Future<void> _loadUserProfile() async {
@@ -187,8 +202,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ],
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: Navigate to edit profile
+                      onPressed: () async {
+                        final result = await Navigator.pushNamed(
+                          context,
+                          AppRoutes.editProfile,
+                          arguments: _userData,
+                        );
+                        if (result == true) {
+                          // Reload profile after editing
+                          _loadUserProfile();
+                        }
                       },
                       icon: const Icon(Icons.edit, size: 18),
                       label: const Text('Edit Profile'),
@@ -226,7 +249,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         Icons.event_note, theme),
                     _StatCard(
                         '${favs.length}', 'Favorites', Icons.favorite, theme),
-                    _StatCard('0', 'My Events', Icons.event_available, theme),
+                    _StatCard('$_myEventsCount', 'My Events',
+                        Icons.event_available, theme),
                   ],
                 ),
               ),
@@ -239,7 +263,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 icon: Icons.event,
                 iconColor: theme.primaryColor,
                 title: 'Events I Created',
-                subtitle: 'Manage your published events',
+                subtitle: '$_myEventsCount events',
                 onTap: () => Navigator.pushNamed(context, AppRoutes.myEvents),
                 theme: theme,
               ),

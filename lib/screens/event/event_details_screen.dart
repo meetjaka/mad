@@ -32,7 +32,9 @@ class EventDetailsScreen extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[850]
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -63,7 +65,9 @@ class EventDetailsScreen extends StatelessWidget {
                   Text(
                     'By ${e.organizer}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
                         ),
                   ),
                   const SizedBox(height: 12),
@@ -120,7 +124,9 @@ class EventDetailsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[850]
+                          : Colors.grey[50],
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -188,7 +194,9 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.grey[850]
+            : Colors.grey[50],
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -230,7 +238,9 @@ class _DetailRow extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey[400]
+                      : Colors.grey[600],
                 ),
           ),
           Text(

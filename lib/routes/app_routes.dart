@@ -9,6 +9,7 @@ import '../screens/event/my_events_screen.dart';
 import '../screens/booking/booking_screen.dart';
 import '../screens/booking/my_bookings_screen.dart';
 import '../screens/profile/profile_screen.dart';
+import '../screens/profile/edit_profile_screen.dart';
 import '../screens/favorites/favorites_screen.dart';
 
 class AppRoutes {
@@ -22,6 +23,7 @@ class AppRoutes {
   static const String booking = '/booking';
   static const String myBookings = '/bookings';
   static const String profile = '/profile';
+  static const String editProfile = '/edit-profile';
   static const String favorites = '/favorites';
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
@@ -47,6 +49,11 @@ class AppRoutes {
         return _buildRoute(const MyBookingsScreen(), settings);
       case profile:
         return _buildRoute(const ProfileScreen(), settings);
+      case editProfile:
+        if (args is Map<String, dynamic>) {
+          return _buildRoute(EditProfileScreen(userData: args), settings);
+        }
+        return null;
       case favorites:
         return _buildRoute(const FavoritesScreen(), settings);
       default:

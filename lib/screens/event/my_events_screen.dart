@@ -30,6 +30,8 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     try {
       final result = await ApiService.getUserEvents();
 
+      print('My Events Result: $result');
+
       if (result['success'] == true) {
         setState(() {
           _myEvents = result['data'] ?? [];
@@ -42,8 +44,9 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
         });
       }
     } catch (e) {
+      print('Load events exception: $e');
       setState(() {
-        _error = 'Error: $e';
+        _error = 'Error loading events: ${e.toString()}';
         _isLoading = false;
       });
     }

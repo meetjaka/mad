@@ -72,80 +72,235 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final filtered = _getFilteredEvents(eventsState.events);
 
     return Scaffold(
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Colors.grey[50],
       appBar: const CustomAppBar(title: 'Discover Events'),
       body: RefreshIndicator(
         onRefresh: () => ref.read(eventsProvider.notifier).refresh(),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search and filter row
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.search),
-                        hintText: 'Search events...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                      ),
-                      onChanged: (v) => setState(() => _query = v),
+              // Header section with search
+              Container(
+                padding: const EdgeInsets.all(20.0),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Material(
-                    color: Colors.transparent,
-                    child: PopupMenuButton<String>(
-                      icon: const Icon(Icons.tune),
-                      onSelected: (value) => setState(() => _sortBy = value),
-                      itemBuilder: (BuildContext context) =>
-                          <PopupMenuEntry<String>>[
-                        const PopupMenuItem<String>(
-                          value: 'Popular',
-                          child: Text('Popular'),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Welcome text
+                    Text(
+                      'Find Your Next',
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                height: 1.2,
+                              ),
+                    ),
+                    Text(
+                      'Amazing Event 🎉',
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF5B56D9),
+                                height: 1.2,
+                              ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Search and filter row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: TextField(
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.search, size: 22),
+                                hintText: 'Search events, organizers...',
+                                hintStyle: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 14,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.grey[850]
+                                    : Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                              ),
+                              onChanged: (v) => setState(() => _query = v),
+                            ),
+                          ),
                         ),
-                        const PopupMenuItem<String>(
-                          value: 'Rating',
-                          child: Text('Top Rated'),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'Nearest',
-                          child: Text('Coming Soon'),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'Price: Low to High',
-                          child: Text('Price: Low to High'),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF5B56D9), Color(0xFF7C77E8)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF5B56D9).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: PopupMenuButton<String>(
+                              icon: const Icon(Icons.tune, color: Colors.white),
+                              onSelected: (value) =>
+                                  setState(() => _sortBy = value),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              itemBuilder: (BuildContext context) =>
+                                  <PopupMenuEntry<String>>[
+                                const PopupMenuItem<String>(
+                                  value: 'Popular',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.trending_up, size: 20),
+                                      SizedBox(width: 12),
+                                      Text('Popular'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem<String>(
+                                  value: 'Rating',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.star, size: 20),
+                                      SizedBox(width: 12),
+                                      Text('Top Rated'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem<String>(
+                                  value: 'Nearest',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.calendar_today, size: 20),
+                                      SizedBox(width: 12),
+                                      Text('Coming Soon'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem<String>(
+                                  value: 'Price: Low to High',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.attach_money, size: 20),
+                                      SizedBox(width: 12),
+                                      Text('Price: Low to High'),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
 
-              // Category chips
-              CategoryChips(
-                categories: categories,
-                selected: _selected,
-                onSelected: (c) => setState(() => _selected = c),
+              const SizedBox(height: 20),
+
+              // Category chips section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Categories',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    CategoryChips(
+                      categories: categories,
+                      selected: _selected,
+                      onSelected: (c) => setState(() => _selected = c),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
+
+              const SizedBox(height: 24),
+
+              // Events section header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      filtered.isEmpty
+                          ? 'No Events'
+                          : 'Featured Events (${filtered.length})',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    if (!eventsState.isLoading && filtered.isNotEmpty)
+                      Text(
+                        'Sorted by: $_sortBy',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[600],
+                              fontStyle: FontStyle.italic,
+                            ),
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
 
               // Events grid or loading
-              Expanded(
-                child: eventsState.isLoading
-                    ? GridView.builder(
+              eventsState.isLoading
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           childAspectRatio: 0.72,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
                         ),
                         itemCount: 6,
                         itemBuilder: (context, i) => Shimmer(
@@ -157,82 +312,121 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           ),
                         ),
-                      )
-                    : eventsState.error != null
-                        ? Center(
+                      ),
+                    )
+                  : eventsState.error != null
+                      ? Padding(
+                          padding: const EdgeInsets.all(40),
+                          child: Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.error_outline,
-                                  size: 64,
-                                  color: Colors.red[300],
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[50],
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.error_outline,
+                                    size: 64,
+                                    color: Colors.red[400],
+                                  ),
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 24),
                                 Text(
-                                  'Error loading events',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
+                                  'Oops! Something went wrong',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   eventsState.error!,
                                   style: Theme.of(context)
                                       .textTheme
-                                      .bodySmall
+                                      .bodyMedium
                                       ?.copyWith(
                                         color: Colors.grey[600],
                                       ),
                                   textAlign: TextAlign.center,
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 24),
                                 ElevatedButton.icon(
                                   onPressed: () {
                                     ref.read(eventsProvider.notifier).refresh();
                                   },
                                   icon: const Icon(Icons.refresh),
-                                  label: const Text('Retry'),
+                                  label: const Text('Try Again'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 32,
+                                      vertical: 16,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                          )
-                        : filtered.isEmpty
-                            ? Center(
+                          ),
+                        )
+                      : filtered.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.all(40),
+                              child: Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                      Icons.search_off,
-                                      size: 64,
-                                      color: Colors.grey[300],
+                                    Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.event_busy,
+                                        size: 64,
+                                        color: Colors.grey[400],
+                                      ),
                                     ),
-                                    const SizedBox(height: 16),
+                                    const SizedBox(height: 24),
                                     Text(
-                                      'No events found',
+                                      'No Events Found',
                                       style: Theme.of(context)
                                           .textTheme
-                                          .titleMedium,
+                                          .titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       'Try adjusting your search or filters',
                                       style: Theme.of(context)
                                           .textTheme
-                                          .bodySmall
+                                          .bodyMedium
                                           ?.copyWith(
                                             color: Colors.grey[600],
                                           ),
                                     ),
                                   ],
                                 ),
-                              )
-                            : GridView.builder(
+                              ),
+                            )
+                          : Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              child: GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 2,
                                   childAspectRatio: 0.72,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
                                 ),
                                 itemCount: filtered.length,
                                 itemBuilder: (context, i) => EventCard(
@@ -244,7 +438,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   ),
                                 ),
                               ),
-              ),
+                            ),
+              const SizedBox(height: 100), // Bottom padding for scroll
             ],
           ),
         ),
