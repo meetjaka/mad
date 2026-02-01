@@ -223,6 +223,67 @@ class ApiService {
     await prefs.remove('user_data');
   }
 
+  // Delete account
+  static Future<Map<String, dynamic>> deleteAccount() async {
+    try {
+      final user = await getUser();
+      if (user == null || user['id'] == null) {
+        return {'success': false, 'message': 'User not found'};
+      }
+
+      final token = await getToken();
+      print('Deleting account for user ID: ${user['id']}');
+      print('Using backend: $baseUrl');
+      
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl/auth/${user['id']}'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null) 'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print('Delete response status: ${response.statusCode}');
+      print('Delete response body: ${response.body}');
+
+      // Check if response is HTML (endpoint doesn't exist)
+      if (response.body.trim().startsWith('<!DOCTYPE') || 
+          response.body.trim().startsWith('<html')) {
+        return {
+          'success': false,
+          'message': 'Backend error: The delete endpoint may not exist on the deployed server. Try using local backend or wait for Render to deploy the latest changes.'
+        };
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        // Clear all local data
+        await logout();
+        return {'success': true, 'message': data['message']};
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to delete account'
+        };
+      }
+    } catch (e) {
+      print('Delete account error: $e');
+      
+      // Better error message for format exceptions
+      if (e.toString().contains('FormatException')) {
+        return {
+          'success': false,
+          'message': 'Backend error: The delete endpoint is not available on the deployed server. Please use local backend or deploy latest changes to Render first.'
+        };
+      }
+      
+      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
+
   // Get events
   static Future<Map<String, dynamic>> getEvents({
     String? category,

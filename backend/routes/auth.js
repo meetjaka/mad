@@ -2,6 +2,9 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Booking = require("../models/Booking");
+const Favorite = require("../models/Favorite");
+const Review = require("../models/Review");
 const router = express.Router();
 
 // Register
@@ -206,6 +209,37 @@ router.put("/:userId", async (req, res) => {
   } catch (err) {
     console.error("Error updating profile:", err);
     res.status(500).json({ success: false, message: "Error updating profile" });
+  }
+});
+
+// Delete user account
+router.delete("/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    // Delete all related data
+    await Promise.all([
+      Booking.deleteMany({ userId }),
+      Favorite.deleteMany({ userId }),
+      Review.deleteMany({ userId }),
+      User.findByIdAndDelete(userId),
+    ]);
+
+    res.json({
+      success: true,
+      message: "Account and all related data deleted successfully",
+    });
+  } catch (err) {
+    console.error("Error deleting account:", err);
+    res.status(500).json({ success: false, message: "Error deleting account" });
   }
 });
 
