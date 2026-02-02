@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/api_service.dart';
+import '../../models/event_model.dart';
 import '../../routes/app_routes.dart';
 
 class MyEventsScreen extends StatefulWidget {
@@ -159,6 +160,28 @@ class _EventCard extends StatelessWidget {
 
   const _EventCard({required this.event});
 
+  Event _convertToEvent(dynamic eventData) {
+    return Event(
+      id: eventData['_id']?.toString() ?? eventData['id']?.toString() ?? '',
+      title: eventData['title'] ?? '',
+      organizer: eventData['organizer'] ?? 'Unknown',
+      dateTime: eventData['dateTime'] != null
+          ? DateTime.parse(eventData['dateTime'])
+          : DateTime.now(),
+      location: eventData['location'] ?? '',
+      price: (eventData['price'] ?? 0).toDouble(),
+      imageUrl: eventData['imageUrl'] ?? 'https://picsum.photos/400/300',
+      category: eventData['category'] ?? 'Other',
+      description: eventData['description'] ?? '',
+      rating: (eventData['rating'] ?? 4.5).toDouble(),
+      attendees: eventData['attendees'] ?? 0,
+      duration: eventData['duration'] ?? '2 hours',
+      difficulty: eventData['difficulty'] ?? 'Beginner',
+      tags:
+          eventData['tags'] != null ? List<String>.from(eventData['tags']) : [],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -258,8 +281,19 @@ class _EventCard extends StatelessWidget {
                   ),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    // TODO: Navigate to event details or edit
+                  onPressed: () async {
+                    // Navigate to edit event screen
+                    final result = await Navigator.pushNamed(
+                      context,
+                      AppRoutes.editEvent,
+                      arguments: _convertToEvent(event),
+                    );
+                    if (result == true) {
+                      // Reload events after edit/delete
+                      final state = context
+                          .findAncestorStateOfType<_MyEventsScreenState>();
+                      state?._loadMyEvents();
+                    }
                   },
                   icon: const Icon(Icons.edit, size: 18),
                   label: const Text('Edit'),

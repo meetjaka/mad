@@ -5,6 +5,7 @@ import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/event/event_details_screen.dart';
 import '../screens/event/add_event_screen.dart';
+import '../screens/event/edit_event_screen.dart';
 import '../screens/event/my_events_screen.dart';
 import '../screens/booking/booking_screen.dart';
 import '../screens/booking/my_bookings_screen.dart';
@@ -19,6 +20,7 @@ class AppRoutes {
   static const String home = '/home';
   static const String eventDetails = '/event';
   static const String addEvent = '/add-event';
+  static const String editEvent = '/edit-event';
   static const String myEvents = '/my-events';
   static const String booking = '/booking';
   static const String myBookings = '/bookings';
@@ -41,6 +43,8 @@ class AppRoutes {
         return _buildRoute(EventDetailsScreen(event: args), settings);
       case addEvent:
         return _buildRoute(const AddEventScreen(), settings);
+      case editEvent:
+        return _buildRoute(EditEventScreen(event: args), settings);
       case myEvents:
         return _buildRoute(const MyEventsScreen(), settings);
       case booking:

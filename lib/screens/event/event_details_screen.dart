@@ -2,17 +2,64 @@ import 'package:flutter/material.dart';
 import '../../models/event_model.dart';
 import '../../widgets/custom_button.dart';
 import '../../routes/app_routes.dart';
+import '../../core/api_service.dart';
 
-class EventDetailsScreen extends StatelessWidget {
+class EventDetailsScreen extends StatefulWidget {
   final Object? event;
 
   const EventDetailsScreen({super.key, required this.event});
 
   @override
+  State<EventDetailsScreen> createState() => _EventDetailsScreenState();
+}
+
+class _EventDetailsScreenState extends State<EventDetailsScreen> {
+  bool _isMyEvent = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfMyEvent();
+  }
+
+  Future<void> _checkIfMyEvent() async {
+    final user = await ApiService.getUser();
+    if (user != null && widget.event is Event) {
+      final event = widget.event as Event;
+      // Check if current user is the organizer
+      setState(() {
+        _isMyEvent = user['name'] == event.organizer ||
+            user['id'] == event.id ||
+            user['_id'] == event.id;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final e = event as Event;
+    final e = widget.event as Event;
     return Scaffold(
-      appBar: AppBar(title: Text(e.title)),
+      appBar: AppBar(
+        title: Text(e.title),
+        actions: _isMyEvent
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () async {
+                    final result = await Navigator.pushNamed(
+                      context,
+                      AppRoutes.editEvent,
+                      arguments: e,
+                    );
+                    if (result == true && mounted) {
+                      Navigator.pop(context, true); // Return to previous screen
+                    }
+                  },
+                  tooltip: 'Edit Event',
+                ),
+              ]
+            : null,
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

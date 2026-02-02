@@ -234,26 +234,25 @@ class ApiService {
       final token = await getToken();
       print('Deleting account for user ID: ${user['id']}');
       print('Using backend: $baseUrl');
-      
-      final response = await http
-          .delete(
-            Uri.parse('$baseUrl/auth/${user['id']}'),
-            headers: {
-              'Content-Type': 'application/json',
-              if (token != null) 'Authorization': 'Bearer $token',
-            },
-          )
-          .timeout(const Duration(seconds: 15));
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/auth/${user['id']}'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 15));
 
       print('Delete response status: ${response.statusCode}');
       print('Delete response body: ${response.body}');
 
       // Check if response is HTML (endpoint doesn't exist)
-      if (response.body.trim().startsWith('<!DOCTYPE') || 
+      if (response.body.trim().startsWith('<!DOCTYPE') ||
           response.body.trim().startsWith('<html')) {
         return {
           'success': false,
-          'message': 'Backend error: The delete endpoint may not exist on the deployed server. Try using local backend or wait for Render to deploy the latest changes.'
+          'message':
+              'Backend error: The delete endpoint may not exist on the deployed server. Try using local backend or wait for Render to deploy the latest changes.'
         };
       }
 
@@ -271,15 +270,16 @@ class ApiService {
       }
     } catch (e) {
       print('Delete account error: $e');
-      
+
       // Better error message for format exceptions
       if (e.toString().contains('FormatException')) {
         return {
           'success': false,
-          'message': 'Backend error: The delete endpoint is not available on the deployed server. Please use local backend or deploy latest changes to Render first.'
+          'message':
+              'Backend error: The delete endpoint is not available on the deployed server. Please use local backend or deploy latest changes to Render first.'
         };
       }
-      
+
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
     }
   }
@@ -492,6 +492,105 @@ class ApiService {
       };
     } catch (e) {
       print('Get user profile error: $e');
+      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  // Update event
+  static Future<Map<String, dynamic>> updateEvent({
+    required String eventId,
+    required String title,
+    required String description,
+    required String category,
+    required String location,
+    required DateTime dateTime,
+    required double price,
+    required String duration,
+    required String difficulty,
+  }) async {
+    try {
+      final token = await getToken();
+      final user = await getUser();
+
+      if (token == null || user == null) {
+        return {'success': false, 'message': 'Please login to update events'};
+      }
+
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/events/$eventId'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'title': title,
+              'description': description,
+              'category': category,
+              'location': location,
+              'dateTime': dateTime.toIso8601String(),
+              'price': price,
+              'duration': duration,
+              'difficulty': difficulty,
+              'organizer': user['name'],
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      print('Update event response: ${response.statusCode}');
+      print('Update event response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': data['data'],
+          'message': data['message']
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to update event'
+        };
+      }
+    } catch (e) {
+      print('Update event error: $e');
+      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  // Delete event
+  static Future<Map<String, dynamic>> deleteEvent(String eventId) async {
+    try {
+      final token = await getToken();
+
+      if (token == null) {
+        return {'success': false, 'message': 'Please login to delete events'};
+      }
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/events/$eventId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      print('Delete event response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'message': data['message']};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to delete event'
+        };
+      }
+    } catch (e) {
+      print('Delete event error: $e');
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
     }
   }

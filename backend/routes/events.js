@@ -141,26 +141,32 @@ router.put("/:id", async (req, res) => {
       duration,
       difficulty,
       tags,
+      maxAttendees,
     } = req.body;
+
+    const updateData = {
+      updatedAt: new Date(),
+    };
+
+    // Only update fields that are provided
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (organizer !== undefined) updateData.organizer = organizer;
+    if (category !== undefined) updateData.category = category;
+    if (dateTime !== undefined) updateData.dateTime = new Date(dateTime);
+    if (location !== undefined) updateData.location = location;
+    if (price !== undefined) updateData.price = price;
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+    if (rating !== undefined) updateData.rating = rating;
+    if (attendees !== undefined) updateData.attendees = attendees;
+    if (duration !== undefined) updateData.duration = duration;
+    if (difficulty !== undefined) updateData.difficulty = difficulty;
+    if (tags !== undefined) updateData.tags = tags;
+    if (maxAttendees !== undefined) updateData.maxAttendees = maxAttendees;
 
     const updatedEvent = await Event.findByIdAndUpdate(
       req.params.id,
-      {
-        title,
-        description,
-        organizer,
-        category,
-        dateTime: new Date(dateTime),
-        location,
-        price,
-        imageUrl,
-        rating,
-        attendees,
-        duration,
-        difficulty,
-        tags,
-        updatedAt: new Date(),
-      },
+      updateData,
       { new: true },
     );
 
